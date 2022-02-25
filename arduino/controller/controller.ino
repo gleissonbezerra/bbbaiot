@@ -8,8 +8,7 @@
 
 #define SERVO_PIN 6 // Digital pin connected to the DHT sensor
 
-#define seconds() ((int)(millis()/1000))
-#define SAMPLE_TIME 1 // do PID each second
+#define SAMPLE_TIME 100 // PID interval in miliseconds
 
 #define VALVE_OFFSET 90
 
@@ -30,10 +29,11 @@ boolean stringComplete = false;  // whether the string is complete
 
 Servo valveServo; // Servo controller
 int currentPos = 0; // Servo position 0 = midpoint
+int avgCount = 0;
 
 float tSetPoint;
 
-float kp = 5, ki = 2.5, kd = 0.02;
+float kp = 10, ki = 5, kd = 0.1;
 
 long time;
 long et;
@@ -46,7 +46,7 @@ float integralError = 0;
 float derivativeError = 0;
 
 float h;
-float t;
+float t, avgTemp = 0;
 
 
 void receiveData(int bytecount)
@@ -76,7 +76,7 @@ void setup()
 {
   Serial.begin(9600);
   while(!Serial);
-  Serial.println("setpoint, temperature, valve");
+  Serial.println("SP, PV, CO");
 
   dht.begin();
 
@@ -94,6 +94,8 @@ void setup()
 
   for( int i = 0; i < 3; ++i)
   {
+    tSetPoint = max(tSetPoint, dht.readTemperature());
+    
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
     delay(1000);                       // wait for a second
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
@@ -116,20 +118,20 @@ void loop()
   else
   {
 
-
     et = millis() - sampleTime;
 
-    if ( et > SAMPLE_TIME)
+    if ( et > SAMPLE_TIME && avgCount > 0)
     {
+      avgTemp = (float)avgTemp/avgCount;
 
       Serial.print(tSetPoint);
       Serial.print(" ");
-      Serial.print(t);
+      Serial.print(avgTemp);
 
       sampleTime = millis();
       dt = (float)et/1000;
 
-      error = tSetPoint - t;
+      error = tSetPoint - avgTemp;
 
       integralError = integralError + (float)error * dt;
       derivativeError = (float)(error - pError)/dt;
@@ -137,17 +139,23 @@ void loop()
       pError = error;
 
       currentPos = VALVE_OFFSET + (int)(kp*error + ki * integralError + kd * derivativeError);
-      currentPos = constrain(currentPos,0,180); //valve limits
+      currentPos = constrain(currentPos,0,180); 
 
       valveServo.write(currentPos);
 
       Serial.print(" ");
       Serial.println(currentPos);
 
+      avgTemp = 0;
+      avgCount = 0;
+
+    }else{
+      avgTemp += t;
+      avgCount++;
     }
 
 
-    outputString = String("{sensor: 'dht11', t:"+String(t)+",h:"+String(h)+"}");
+    outputString = String("{'sensor': 'dht11', 't':"+String(t)+", 'h':"+String(h)+"}");
 
     // Serial.print("Humidity: ");
     // Serial.print(h);
