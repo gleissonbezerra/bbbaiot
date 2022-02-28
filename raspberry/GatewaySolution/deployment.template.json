@@ -88,7 +88,7 @@
                   "PortBindings": {
                     "8080/tcp": [
                       {
-                        "HostPort": "8081"
+                        "HostPort": "8080"
                       }
                     ]
                   }
@@ -105,6 +105,12 @@
               "image": "${MODULES.CameraModule.arm32v7}",
               "createOptions": 
               {
+                "Env": [
+                  "CAMERA_INDEX=0",
+                  "CAMERA_INTERVAL=1",
+                  "INFERENCE_INTERVAL=1",
+                  "INFERENCE_URL=http://MobileDetectionModule:8080/analyze"
+                ],
                 "HostConfig":
                 {
                   "Privileged": true
@@ -119,10 +125,8 @@
       "properties.desired": {
         "schemaVersion": "1.1",
         "routes": {
-          "sensorToControlModule": "FROM /messages/modules/SimulatedTemperatureSensor/outputs/temperatureOutput INTO BrokeredEndpoint(\"/modules/ControlModule/inputs/input1\")",
-          "CommandModuleToIoTHub": "FROM /messages/modules/CommandModule/outputs/* INTO $upstream",
-          "MobileDetectionModuleToIoTHub": "FROM /messages/modules/MobileDetectionModule/outputs/* INTO $upstream",
-          "CameraModuleToIoTHub": "FROM /messages/modules/CameraModule/outputs/* INTO $upstream"
+          "CameraModuleToCommandModule": "FROM /messages/modules/CameraModule/outputs/detectionsOutput INTO BrokeredEndpoint(\"/modules/CommandModule/inputs/DetectionsInput\")",
+          "CommandModuleToIoTHub": "FROM /messages/modules/CommandModule/outputs/* INTO $upstream"
         },
         "storeAndForwardConfiguration": {
           "timeToLiveSecs": 7200

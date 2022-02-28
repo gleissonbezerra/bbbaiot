@@ -3,14 +3,17 @@
 # full license information.
 
 import cv2 as cv
-
 import requests
+import os
+import uuid
+import json
 
 import asyncio
 import sys
 import signal
 import threading
 from azure.iot.device.aio import IoTHubModuleClient
+from azure.iot.device import Message
 
 from CaptureManager import CaptureManager
 
@@ -28,35 +31,15 @@ def resize(img, scale_percent):
 
 def create_client():
     client = IoTHubModuleClient.create_from_edge_environment()
-
-    # Define function for handling received messages
-    async def receive_message_handler(message):
-        # NOTE: This function only handles messages sent to "input1".
-        # Messages sent to other inputs, or to the default, will be discarded
-        if message.input_name == "input1":
-            print("the data in the message received on input1 was ")
-            print(message.data)
-            print("custom properties are")
-            print(message.custom_properties)
-            print("forwarding mesage to output1")
-            await client.send_message_to_output(message, "output1")
-
-    try:
-        # Set handler on the client
-        client.on_message_received = receive_message_handler
-    except:
-        # Cleanup if failure occurs
-        client.shutdown()
-        raise
-
     return client
 
 
 def processFrame(frameBytes):
+    global INFERENCE_URL
 
     multipart_form_data = {'frame': ("frame.jpg", frameBytes)}
 
-    response = requests.post('http://MobileDetectionModule:8080/analyze',files=multipart_form_data)
+    response = requests.post(INFERENCE_URL,files=multipart_form_data, timeout=2)
 
     return response.json()
 
@@ -64,6 +47,9 @@ async def run_sample(client):
     # Customize this coroutine to do whatever tasks the module initiates
     # e.g. sending messages
     global cap
+
+    INFERENCE_INTERVAL = float(os.getenv('INFERENCE_INTERVAL', "1.0"))
+
 
     while True:
 
@@ -74,15 +60,27 @@ async def run_sample(client):
         frameBytes = cv.imencode( '.jpg', frame)[1].tobytes()
         r = processFrame(frameBytes)
 
-        print (r)
+        #print (r)
+
+        if r != None and "detections" in r:
+
+            del r['fps']
+            
+            strCommand = json.dumps(r)
+
+            msg = Message(strCommand)
+            msg.message_id = uuid.uuid4()
+
+            await client.send_message_to_output(msg, "detectionsOutput")
 
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(INFERENCE_INTERVAL)
 
 
 def main():
     global vf
     global cap
+    global INFERENCE_URL
 
     if not sys.version >= "3.5.3":
         raise Exception( "The sample requires python 3.5.3+. Current version of Python: %s" % sys.version )
@@ -90,13 +88,17 @@ def main():
 
     print("Python3 cv2 version: %s" % cv.__version__)
 
-    vf = cv.VideoCapture(0)
+    CAMERA_INDEX = int(os.getenv('CAMERA_INDEX', "0"))
+    CAMERA_INTERVAL = float(os.getenv('CAMERA_INTERVAL', "1.0"))
+    INFERENCE_URL = os.getenv('INFERENCE_URL', "")
+
+    vf = cv.VideoCapture(CAMERA_INDEX)
 
     if not vf.isOpened():
         print("Error opening camera!!!")
         exit()
 
-    cap = CaptureManager(vf).start()
+    cap = CaptureManager(vf, CAMERA_INTERVAL).start()
 
     # NOTE: Client is implicitly connected due to the handler being set on it
     client = create_client()

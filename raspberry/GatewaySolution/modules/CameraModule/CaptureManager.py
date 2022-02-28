@@ -3,12 +3,13 @@ import time
 
 
 class CaptureManager:
-	def __init__(self, videoFeed):
+	def __init__(self, videoFeed, interval):
 
 		self.vf = videoFeed
 		self.stopped = False
 
 		self.lastFrame = None
+		self.interval = interval
 
 	def start(self):
 
@@ -27,7 +28,7 @@ class CaptureManager:
 			if ret:
 				self.lastFrame = frame
 
-			time.sleep(0.1)
+			time.sleep(self.interval)
 
 	
 	def getLastFrame(self):

@@ -25,17 +25,12 @@ def parseRequest(r):
 
         frameFile = r.files['frame']
 
-        if "target" in r.form:
-            target = r.form["target"]
-        else:
-            target = ""
-
         if frameFile:
             jpg = frameFile.read()
             frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
 
    
-    return frame, target
+    return frame
 
 
 @app.route('/')
@@ -53,7 +48,7 @@ def analyze():
 
     if request.method == 'POST':
 
-        f, t = parseRequest(request)
+        f = parseRequest(request)
 
         r = ic.inference(f)
 
@@ -82,7 +77,7 @@ def gen_frames():  # generate frame by frame from camera
 
     while True:
 
-        # try:
+        try:
 
             f = lastFrame
             m = lastInference
@@ -104,29 +99,15 @@ def gen_frames():  # generate frame by frame from camera
 
                     cv2.putText(f, text, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
 
-                # if "target" in m:
-
-                #     x = m["target"]["x"]
-                #     y = m["target"]["y"]
-                #     w = m["target"]["w"]
-                #     h = m["target"]["h"]
-                    
-                #     xCenter = x + int(w/2)
-                #     yCenter = y + int(h/2)
-
-                #     cv2.line(f, (xCenter, yCenter-t), (xCenter, yCenter+t), (0,0,255), 2)
-                #     cv2.line(f, (xCenter-t, yCenter), (xCenter+t, yCenter), (0,0,255), 2)
-
-
 
             cv2.putText(f, "FPS: {:.2f}".format(fps), (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
 
             encodedFrame = cv2.imencode( '.jpg', f)
             yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + encodedFrame[1].tobytes() + b'\r\n\r\n')
 
-        # except:
-        #     print("Error on enconding frame bytes!")
-        #     yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + b'\r\n\r\n')
+        except:
+            print("Error on enconding frame bytes!")
+            yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + b'\r\n\r\n')
 
 def main():
 
