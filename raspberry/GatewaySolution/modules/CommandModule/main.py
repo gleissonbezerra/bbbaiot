@@ -23,7 +23,7 @@ stop_event = threading.Event()
 
 def create_client():
 
-    PEOPLE_ALERT = float(os.getenv('PEOPLE_ALERT', "10.00"))
+    PEOPLE_ALERT_INTERVAL = float(os.getenv('PEOPLE_ALERT_INTERVAL', "10.00"))
 
     client = IoTHubModuleClient.create_from_edge_environment()
 
@@ -58,7 +58,7 @@ def create_client():
 
                 if peopleDetected > 0:
                     if alertStarted:
-                        if time.time() - alertTimer >= PEOPLE_ALERT:
+                        if time.time() - alertTimer >= PEOPLE_ALERT_INTERVAL:
                             print ("Alert confirmed. Sendindg notification...")
 
                             strMessage = '{"type":"peopleAlert", "count":'+str(peopleDetected)+'}'
@@ -111,7 +111,6 @@ async def run_sample(client):
     global I2C_BUS_NUMBER
     global I2C_SLAVE_ADDRESS
 
-    TEMPERATURE_ALERT = float(os.getenv('TEMPERATURE_ALERT', "30.00"))
     I2C_INTERVAL = float(os.getenv('I2C_INTERVAL', "5.0"))
 
     while True:
@@ -142,24 +141,6 @@ async def run_sample(client):
                     msg.content_type = "application/json"
 
                     await client.send_message_to_output(msg, "telemetryOutput")
-
-                    if temperature >= TEMPERATURE_ALERT:
-
-                        strMessage = '{"type":"telemetryAlert", "temperature":'+str(temperature)+'}'
-
-                        msg = Message(strMessage)
-                        msg.message_id = uuid.uuid4()
-                        msg.content_encoding = "utf-8"
-                        msg.content_type = "application/json"
-
-                        await client.send_message_to_output(msg, "alertsOutput")
-
-
-                        #send close command over i2c
-                        command = "close"
-                        print("Sending "+command+" to I2C slave!")
-                        i2c.write_i2c_block_data(I2C_SLAVE_ADDRESS, 0, command.encode('utf-8'))			
-
 
                 else:
 
