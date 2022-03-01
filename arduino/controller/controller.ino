@@ -26,6 +26,7 @@ DHT dht(DHTPIN, DHTTYPE);
 String inputString = "";//Store i2c data
 String outputString = "";//enqueue i2c data
 boolean stringComplete = false;  // whether the string is complete
+boolean halt = false;
 
 Servo valveServo; // Servo controller
 int currentPos = 0; // Servo position 0 = midpoint
@@ -56,7 +57,6 @@ void receiveData(int bytecount)
   for (int i = 0; i < bytecount; i++) {
     inChar = Wire.read();
     inputString += String(inChar);
-    Serial.println(inputString);
   }
 
   stringComplete = true;
@@ -66,6 +66,7 @@ void sendData()
 {
   if ( outputString != "" )
   {
+    Serial.println(outputString);
     Wire.write(outputString.c_str());
     outputString = "";
   }
@@ -106,6 +107,22 @@ void setup()
  
 void loop() 
 {
+
+  if ( stringComplete )
+  {
+    //Serial.println(inputString);
+    if ( inputString == "close")
+    {
+      halt = true;
+      digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+      Serial.println("Critical stop due to alarm condition. Please, reset manually!");
+      valveServo.write(0);
+    }
+    
+    stringComplete = false;
+    inputString = "";  
+  }
+  
   // Reading temperature or humidity takes about 250 milliseconds!
   h = dht.readHumidity();
   t = dht.readTemperature();
@@ -124,9 +141,9 @@ void loop()
     {
       avgTemp = (float)avgTemp/avgCount;
 
-      Serial.print(tSetPoint);
-      Serial.print(" ");
-      Serial.print(avgTemp);
+//      Serial.print(tSetPoint);
+//      Serial.print(" ");
+//      Serial.print(avgTemp);
 
       sampleTime = millis();
       dt = (float)et/1000;
@@ -141,10 +158,13 @@ void loop()
       currentPos = VALVE_OFFSET + (int)(kp*error + ki * integralError + kd * derivativeError);
       currentPos = constrain(currentPos,0,180); 
 
-      valveServo.write(currentPos);
-
-      Serial.print(" ");
-      Serial.println(currentPos);
+      if (!halt)
+      {
+        valveServo.write(currentPos);
+      }
+        
+//      Serial.print(" ");
+//      Serial.println(currentPos);
 
       avgTemp = 0;
       avgCount = 0;
@@ -155,7 +175,8 @@ void loop()
     }
 
 
-    outputString = String("{'sensor': 'dht11', 't':"+String(t)+", 'h':"+String(h)+"}");
+    outputString = String("{\"t\":"+String(t)+", \"h\":"+String(h)+"}");
+    
 
     // Serial.print("Humidity: ");
     // Serial.print(h);

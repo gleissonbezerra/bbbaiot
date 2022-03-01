@@ -66,9 +66,9 @@ async def run_sample(client):
 
             del r['fps']
             
-            strCommand = json.dumps(r)
+            strMessage = json.dumps(r)
 
-            msg = Message(strCommand)
+            msg = Message(strMessage)
             msg.message_id = uuid.uuid4()
 
             await client.send_message_to_output(msg, "detectionsOutput")
