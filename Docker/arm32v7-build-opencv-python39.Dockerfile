@@ -4,7 +4,8 @@ LABEL mantainer="Gleisson Bezerra <gleisson.bezerra@hotmail.com>"
 
 WORKDIR /opt/build
 
-ENV OPENCV_VERSION="4.5.1"
+#ENV OPENCV_VERSION="4.5.1"
+ENV OPENCV_VERSION="4.7.0"
 
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \
@@ -23,12 +24,15 @@ RUN apt-get -qq update \
         libtiff-dev \
         libopenjp2-7-dev \
         libavformat-dev \
-        libpq-dev \
-    && pip install numpy \
-    && wget -q https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip -O opencv.zip \
+        libpq-dev
+
+RUN pip install numpy
+
+RUN wget -q https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip -O opencv.zip \
     && unzip -qq opencv.zip -d /opt \
-    && rm -rf opencv.zip \
-    && cmake \
+    && rm -rf opencv.zip
+
+RUN  cmake \
         -D ENABLE_NEON=ON \
         -D BUILD_opencv_java=OFF \
         -D WITH_CUDA=OFF \
@@ -43,8 +47,9 @@ RUN apt-get -qq update \
         -D PYTHON_EXECUTABLE=$(which python3.9) \
         -D PYTHON_INCLUDE_DIR=$(python3.9 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
         -D PYTHON_PACKAGES_PATH=$(python3.9 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") \
-        /opt/opencv-${OPENCV_VERSION} \
-    && make -j4 \
+        /opt/opencv-${OPENCV_VERSION}
+
+RUN make -j5 \
     && make install \
     && rm -rf /opt/build/* \
     && rm -rf /opt/opencv-${OPENCV_VERSION} \

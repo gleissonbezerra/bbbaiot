@@ -1,7 +1,7 @@
 FROM python:3.9-slim-bullseye
 
-RUN apt-get update
-RUN apt-get upgrade 
+RUN apt-get -y update
+RUN apt-get -y upgrade 
 
 RUN apt-get install -y  --no-install-recommends\
         build-essential \
@@ -41,6 +41,7 @@ RUN cmake \
         -D BUILD_TBB=ON \
         -D BUILD_IPP_IW=OFF \
         -D BUILD_ITT=OFF \
+        -D WITH_CUDA=OFF \
         -D WITH_OPENMP=ON \
         -D WITH_OPENCL=OFF \
         -D WITH_AVFOUNDATION=OFF \
@@ -69,6 +70,8 @@ RUN cmake \
         -D WITH_LIBV4L=ON \
         -D WITH_VTK=OFF \
         -D WITH_QT=OFF \
+        -D BUILD_TESTS=OFF \
+        -D BUILD_PERF_TESTS=OFF \
         -D BUILD_opencv_python3=ON \
         -D BUILD_opencv_java=OFF \
         -D BUILD_opencv_gapi=OFF \
@@ -92,7 +95,7 @@ RUN cmake \
         -D PYTHON_PACKAGES_PATH=$(python3.9 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") \
         /opt/opencv
 
-RUN make -j4
+RUN make -j5
 
 RUN make install
 
