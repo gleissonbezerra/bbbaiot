@@ -1,25 +1,25 @@
 FROM python:3.9-slim-bullseye
 
-RUN apt-get -y update
-RUN apt-get -y upgrade 
-
-RUN apt-get install -y  --no-install-recommends\
+RUN apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends \
         build-essential \
         cmake \
         git \
         wget \
         unzip \
         pkg-config \
-        python3-dev \
-        python3-numpy
+        python3-dev 
 
-RUN apt-get install -y  --no-install-recommends\
+RUN apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends \
         libjpeg-dev libpng-dev \
         libavcodec-dev libavformat-dev \
         libswscale-dev libdc1394-22-dev \
         libv4l-dev v4l-utils \
         libgtk2.0-dev libcanberra-gtk* libgtk-3-dev \
         libtbb2 libtbb-dev
+
+RUN pip install numpy
 
 WORKDIR /opt
 
@@ -50,7 +50,7 @@ RUN cmake \
         -D WITH_CPUFEATURES=OFF \
         -D WITH_EIGEN=OFF \
         -D WITH_GSTREAMER=ON \
-        -D WITH_GTK=ON \
+        -D WITH_GTK=OFF \
         -D WITH_IPP=OFF \
         -D WITH_HALIDE=OFF \
         -D WITH_VULKAN=OFF \
